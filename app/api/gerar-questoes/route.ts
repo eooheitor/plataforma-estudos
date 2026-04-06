@@ -1,11 +1,8 @@
-import OpenAI from "openai";
+import { GoogleGenerativeAI } from "@google/generative-ai";
 import { NextRequest, NextResponse } from "next/server";
 import { Questao } from "@/types/quiz";
 
-const client = new OpenAI({
-  apiKey: process.env.GEMINI_API_KEY,
-  baseURL: "https://generativelanguage.googleapis.com/v1beta/openai/",
-});
+const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!);
 
 const SYSTEM_PROMPT = `Você é um especialista em educação e avaliação pedagógica. Sua tarefa é gerar questões de múltipla escolha de alta qualidade a partir de conteúdo fornecido pelo usuário.
 
@@ -54,23 +51,21 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const response = await client.chat.completions.create({
+    const model = genAI.getGenerativeModel({
       model: "gemini-1.5-flash",
-      max_tokens: 8000,
-      messages: [
-        { role: "system", content: SYSTEM_PROMPT },
-        {
-          role: "user",
-          content: `Gere exatamente ${numQuestoes} questões de múltipla escolha com base no seguinte conteúdo:\n\n${conteudo}`,
-        },
-      ],
+      systemInstruction: SYSTEM_PROMPT,
+      generationConfig: {
+        responseMimeType: "application/json",
+        maxOutputTokens: 8000,
+      },
     });
 
-    let jsonText = response.choices[0]?.message?.content?.trim();
-    if (!jsonText) throw new Error("Resposta inválida da API");
+    const result = await model.generateContent(
+      `Gere exatamente ${numQuestoes} questões de múltipla escolha com base no seguinte conteúdo:\n\n${conteudo}`
+    );
 
-    // Remove blocos de código markdown caso o modelo os inclua
-    jsonText = jsonText.replace(/^```(?:json)?\n?/i, "").replace(/\n?```$/i, "").trim();
+    const jsonText = result.response.text().trim();
+    if (!jsonText) throw new Error("Resposta inválida da API");
 
     const parsed = JSON.parse(jsonText) as { questoes: Questao[] };
 
@@ -89,7 +84,8 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    if (typeof error === "object" && error !== null && "status" in error && (error as { status: number }).status === 429) {
+    const err = error as { status?: number; message?: string };
+    if (err.status === 429) {
       return NextResponse.json(
         { error: "Limite de requisições atingido. Aguarde alguns segundos e tente novamente." },
         { status: 429 }
