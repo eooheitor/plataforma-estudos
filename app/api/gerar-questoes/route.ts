@@ -2,7 +2,10 @@ import OpenAI from "openai";
 import { NextRequest, NextResponse } from "next/server";
 import { Questao } from "@/types/quiz";
 
-const client = new OpenAI();
+const client = new OpenAI({
+  apiKey: process.env.GEMINI_API_KEY,
+  baseURL: "https://generativelanguage.googleapis.com/v1beta/openai/",
+});
 
 const SYSTEM_PROMPT = `Você é um especialista em educação e avaliação pedagógica. Sua tarefa é gerar questões de múltipla escolha de alta qualidade a partir de conteúdo fornecido pelo usuário.
 
@@ -52,7 +55,7 @@ export async function POST(request: NextRequest) {
     }
 
     const response = await client.chat.completions.create({
-      model: "gpt-4o-mini",
+      model: "gemini-2.0-flash",
       max_tokens: 8000,
       response_format: { type: "json_object" },
       messages: [
