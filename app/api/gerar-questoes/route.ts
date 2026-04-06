@@ -1,8 +1,8 @@
-import Anthropic from "@anthropic-ai/sdk";
+import OpenAI from "openai";
 import { NextRequest, NextResponse } from "next/server";
 import { Questao } from "@/types/quiz";
 
-const client = new Anthropic();
+const client = new OpenAI();
 
 const SYSTEM_PROMPT = `Você é um especialista em educação e avaliação pedagógica. Sua tarefa é gerar questões de múltipla escolha de alta qualidade a partir de conteúdo fornecido pelo usuário.
 
@@ -51,12 +51,12 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const response = await client.messages.create({
-      model: "claude-opus-4-6",
+    const response = await client.chat.completions.create({
+      model: "gpt-4o-mini",
       max_tokens: 8000,
-      thinking: { type: "adaptive" },
-      system: SYSTEM_PROMPT,
+      response_format: { type: "json_object" },
       messages: [
+        { role: "system", content: SYSTEM_PROMPT },
         {
           role: "user",
           content: `Gere exatamente ${numQuestoes} questões de múltipla escolha com base no seguinte conteúdo:\n\n${conteudo}`,
@@ -64,12 +64,9 @@ export async function POST(request: NextRequest) {
       ],
     });
 
-    const textBlock = response.content.find((b) => b.type === "text");
-    if (!textBlock || textBlock.type !== "text") {
-      throw new Error("Resposta inválida da API");
-    }
+    const jsonText = response.choices[0]?.message?.content?.trim();
+    if (!jsonText) throw new Error("Resposta inválida da API");
 
-    const jsonText = textBlock.text.trim();
     const parsed = JSON.parse(jsonText) as { questoes: Questao[] };
 
     if (!parsed.questoes || parsed.questoes.length === 0) {
