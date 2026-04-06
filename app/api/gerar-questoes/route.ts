@@ -55,9 +55,8 @@ export async function POST(request: NextRequest) {
     }
 
     const response = await client.chat.completions.create({
-      model: "gemini-2.0-flash",
+      model: "gemini-1.5-flash",
       max_tokens: 8000,
-      response_format: { type: "json_object" },
       messages: [
         { role: "system", content: SYSTEM_PROMPT },
         {
@@ -67,8 +66,11 @@ export async function POST(request: NextRequest) {
       ],
     });
 
-    const jsonText = response.choices[0]?.message?.content?.trim();
+    let jsonText = response.choices[0]?.message?.content?.trim();
     if (!jsonText) throw new Error("Resposta inválida da API");
+
+    // Remove blocos de código markdown caso o modelo os inclua
+    jsonText = jsonText.replace(/^```(?:json)?\n?/i, "").replace(/\n?```$/i, "").trim();
 
     const parsed = JSON.parse(jsonText) as { questoes: Questao[] };
 
@@ -84,6 +86,13 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         { error: "Erro ao processar resposta da IA. Tente novamente." },
         { status: 500 }
+      );
+    }
+
+    if (typeof error === "object" && error !== null && "status" in error && (error as { status: number }).status === 429) {
+      return NextResponse.json(
+        { error: "Limite de requisições atingido. Aguarde alguns segundos e tente novamente." },
+        { status: 429 }
       );
     }
 
