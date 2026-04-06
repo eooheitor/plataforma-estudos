@@ -51,14 +51,17 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const model = genAI.getGenerativeModel({
-      model: "gemini-1.5-flash",
-      systemInstruction: SYSTEM_PROMPT,
-      generationConfig: {
-        responseMimeType: "application/json",
-        maxOutputTokens: 8000,
+    const model = genAI.getGenerativeModel(
+      {
+        model: "gemini-1.5-flash",
+        systemInstruction: SYSTEM_PROMPT,
+        generationConfig: {
+          responseMimeType: "application/json",
+          maxOutputTokens: 8000,
+        },
       },
-    });
+      { apiVersion: "v1" }
+    );
 
     const result = await model.generateContent(
       `Gere exatamente ${numQuestoes} questões de múltipla escolha com base no seguinte conteúdo:\n\n${conteudo}`
