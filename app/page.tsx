@@ -143,7 +143,7 @@ export default function HomePage() {
 
         {/* Footer hint */}
         <p className="text-center text-xs text-slate-600 mt-6">
-          Powered by Gemini · Questões geradas com IA para maximizar seu aprendizado
+          Powered by Groq · Questões geradas com IA para maximizar seu aprendizado
         </p>
       </div>
     </main>
